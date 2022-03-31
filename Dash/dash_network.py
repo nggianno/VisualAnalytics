@@ -151,7 +151,7 @@ pivot = pivot.fillna(0)
 # pivot["total_count"] = pivot.sum(axis=1)
 app = Dash(__name__)
 
-fig = px.imshow(pivot, width = 800, height = 1000,color_continuous_scale='gray')
+fig = px.imshow(pivot, width = 600, height = 600,color_continuous_scale='gray_r')
 # fig.update_layout(yaxis_nticks=54,xaxis_nticks=54)
 
 dates = [date(2014, 1, 6),date(2014, 1, 7),date(2014, 1, 8),date(2014, 1, 9),date(2014, 1, 10),
@@ -219,8 +219,7 @@ def filter_heatmap(day, tod, checklist):
 
         # Fill NaN columns with 0
         pivot = pivot.fillna(0)
-        fig = px.imshow(pivot, width=700, height=700, color_continuous_scale='gray_r')
-        fig.update_layout(yaxis_nticks=54, xaxis_nticks=54)
+        fig = px.imshow(pivot, width=600, height=600, color_continuous_scale='gray_r')
         return fig
     if checklist != []:
         print(checklist)
@@ -247,8 +246,7 @@ def filter_heatmap(day, tod, checklist):
 
         # Fill NaN columns with 0
         pivot = pivot.fillna(0)
-        fig = px.imshow(pivot, width=700, height=700, color_continuous_scale='gray_r')
-        fig.update_layout(yaxis_nticks=54, xaxis_nticks=54)
+        fig = px.imshow(pivot, width=600, height=600, color_continuous_scale='gray_r')
         return fig
     # graphdf_names = df[['LastName_From', 'LastName_To', 'count']]
     # pivot = pd.pivot_table(graphdf_names, values='count', index='LastName_From',
@@ -266,8 +264,7 @@ def filter_heatmap(day, tod, checklist):
 
     # Fill NaN columns with 0
     pivot = pivot.fillna(0)
-    fig = px.imshow(pivot, width = 400, height = 400, color_continuous_scale='gray_r')
-    fig.update_layout(yaxis_nticks=54, xaxis_nticks=54)
+    fig = px.imshow(pivot, width = 600, height = 600, color_continuous_scale='gray_r')
     return fig
 
 @app.callback(
@@ -292,8 +289,7 @@ def filter_heatmap(day):
 
     # Fill NaN columns with 0
     pivot = pivot.fillna(0)
-    fig = px.imshow(pivot, width = 700, height = 700, color_continuous_scale='gray_r')
-    fig.update_layout(yaxis_nticks=54, xaxis_nticks=54)
+    fig = px.imshow(pivot, width = 600, height = 600, color_continuous_scale='gray_r')
     return fig
 
 @app.callback(
@@ -306,8 +302,8 @@ def filter_heatmap(people):
     else:
         person_from = people['points'][0]['y']
         person_to = people['points'][0]['x']
-        dff = final[final['LastName_From'] == person_from]
-        final_df = dff[final['LastName_To'] == person_to]
+        dff = final[final['CurrentEmploymentType_From'] == person_from]
+        final_df = dff[final['CurrentEmploymentType_To'] == person_to]
 
         final_df['dates_count'] = final_df.groupby('just_date')['just_date'].transform('count')
 
@@ -322,11 +318,8 @@ def filter_heatmap(people):
     if people != None:
         person_from = people['points'][0]['y']
         person_to = people['points'][0]['x']
-        print("Start")
-        print(person_from)
-        print(person_to)
-        dff = df_emails[df_emails['From'].str.contains(person_from)]
-        final_df = dff[dff['To'].str.contains(person_to)]
+        dff = final[final['CurrentEmploymentType_From'].str.contains(person_from)]
+        final_df = dff[dff['CurrentEmploymentType_To'].str.contains(person_to)]
 
         return getData(final_df)
     else:
