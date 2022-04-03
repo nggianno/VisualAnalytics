@@ -13,6 +13,7 @@ import plotly.graph_objs as go
 import random
 from collections import Counter
 import plotly
+import dash
 
 
 ### EMAILS PREPROCESSING ###
@@ -38,7 +39,6 @@ def find_time_of_day(hour):
 # Function needed in order to update the values in the table
 def getData(df):
     return df.to_dict('rows')
-
 
 # create two dataframes with the data needed
 df_emails_original = pd.read_csv('3.Disappearance at GAStech/data/data/email headers.csv', encoding='cp1252')
@@ -81,6 +81,8 @@ df_emails_original['Date'] = pd.to_datetime(df_emails_original.Date)
 
 # Find time of the day
 df_emails_original['just_date'] = df_emails_original['Date'].dt.date
+
+just_dates = df_emails_original['just_date'].drop_duplicates().tolist()
 
 df_emails_original['day'] = df_emails_original['Date'].dt.day
 
@@ -221,6 +223,8 @@ layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zerol
                     'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False}})
 
 fig2 = go.Figure(data=[data], layout=layout)
+
+idx = pd.date_range('01-06-2014', '01-17-2014')
 
 ### Dash implementation ###
 
@@ -396,8 +400,6 @@ def plot_wordcloud(data):
      Input("security","value")])
 def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
     join_list = engg + exec + facil + it + security
-    print("XXXXXXXXXXXXXXXX")
-    print(join_list)
     if join_list != []:
         if checklist == ["Communication between different departments"]:
             df = final[final['CurrentEmploymentType_From'] != final['CurrentEmploymentType_To']]
@@ -416,8 +418,6 @@ def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
         fig = px.imshow(pivot, width=600, height=600, color_continuous_scale='gray_r')
         return fig
     else:
-        print("enters_else")
-        print(engg)
         if checklist == ["Communication between different departments"]:
             df = final[final['CurrentEmploymentType_From'] != final['CurrentEmploymentType_To']]
             df = df[df['day'].between(day[0], day[1])]
@@ -438,24 +438,114 @@ def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
 
 @app.callback(
     Output("communication", "figure"),
-    [Input("graph", "clickData")])
-def update_timeline(people):
-    if people == None:
-        fig = px.line(final, x="just_date", y="dates_count", title='Communication')
+    [Input("graph", "clickData"),
+     Input("engg", "value"),
+     Input("exec", "value"),
+     Input("facil", "value"),
+     Input("IT", "value"),
+     Input("security", "value")
+     ])
+def update_timeline(people,engg, exec, facil, it, security):
+    ctx = dash.callback_context
+    clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
+    join_list = engg + exec + facil + it + security
+    df = final.copy()
+
+    if people == None and join_list == []:
+        only_dates = df.drop_duplicates(subset='dates_count', keep="first")
+        fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication')
         return fig
-    else:
+
+    if clicked_element == 'graph':
         person_from = people['points'][0]['y']
         person_to = people['points'][0]['x']
-        dff = final[final['CurrentEmploymentType_From'] == person_from]
-        final_df = dff[final['CurrentEmploymentType_To'] == person_to]
+        if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+            dff = df[df['LastName_From'] == person_from]
+        else:
+            dff = df[df['CurrentEmploymentType_From'] == person_from]
+
+        final_df = dff[dff['CurrentEmploymentType_To'] == person_to]
 
         final_df['dates_count'] = final_df.groupby('just_date')['just_date'].transform('count')
+        only_dates = final_df.drop_duplicates(subset='just_date', keep="first")
+        only_dates = only_dates[['just_date', 'dates_count']]
+        only_dates.set_index('just_date', inplace=True)
+        only_dates.index = pd.DatetimeIndex(only_dates.index)
 
-        fig = px.line(final_df, x="just_date", y="dates_count",
-                      title=f'Communication: From: {person_from} To {person_to}')
+        only_dates = only_dates.reindex(idx, fill_value=0)
+
+        only_dates.reset_index(inplace=True)
+        print(only_dates)
+
+        fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative',
+                     title=f'Communication: From: {person_from} To {person_to}')
 
         return fig
+    else:
+        if join_list == []:
+            only_dates = df.drop_duplicates(subset='dates_count', keep="first")
+            fig = px.bar(only_dates, x="just_date", y="dates_count", barmode='relative', title='Communication')
+            return fig
+        else:
+            df = final[final['LastName_From'].isin(join_list)]
+            df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
+            only_dates = df.drop_duplicates(subset='just_date', keep="first")
+            print("before")
+            print(only_dates)
+            only_dates= only_dates[['just_date','dates_count']]
+            print("afteeer1")
+            print(only_dates)
+            only_dates.set_index('just_date',inplace=True)
+            print("afteeer2")
+            print(only_dates)
+            only_dates.index = pd.DatetimeIndex(only_dates.index)
+            print("afteeer3")
+            print(only_dates)
 
+            only_dates = only_dates.reindex(idx, fill_value=0)
+            print("afteeer4")
+            print(only_dates)
+
+            only_dates.reset_index(inplace=True)
+            print("afteeer5")
+            print(only_dates)
+
+
+            fig = px.bar(only_dates, x="index", y="dates_count", barmode= 'relative',
+                          title=f'Communication: From: {join_list} to all departments')
+
+            return fig
+
+    # if join_list != []:
+    #     df = final[final['LastName_From'].isin(join_list)]
+    #     df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
+    #     only_dates = df.drop_duplicates(subset='just_date', keep="first")
+    #
+    #     fig = px.bar(only_dates, x="just_date", y="dates_count", barmode= 'relative',
+    #                   title=f'Communication: From: {join_list} to all departments')
+    #
+    #     return fig
+    # if people == None:
+    #     only_dates = df.drop_duplicates(subset='dates_count', keep="first")
+    #     fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication')
+    #     return fig
+    # else:
+    #     person_from = people['points'][0]['y']
+    #     person_to = people['points'][0]['x']
+    #     if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+    #         dff = df[df['LastName_From'] == person_from]
+    #     else:
+    #         dff = df[df['CurrentEmploymentType_From'] == person_from]
+    #
+    #     final_df = dff[dff['CurrentEmploymentType_To'] == person_to]
+    #
+    #     final_df['dates_count'] = final_df.groupby('just_date')['just_date'].transform('count')
+    #     only_dates = final_df.drop_duplicates(subset='just_date', keep="first")
+    #
+    #     fig = px.bar(only_dates, x="just_date", y="dates_count", barmode= 'relative',
+    #                   title=f'Communication: From: {person_from} To {person_to}')
+    #
+    #     return fig
 
 @app.callback(
     Output("subject", "data"),
