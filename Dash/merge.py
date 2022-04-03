@@ -65,11 +65,11 @@ dept = df_employees['CurrentEmploymentType'].unique().tolist()
 for i in dept:
     globals()[f"{i}"] = df_employees.loc[df_employees['CurrentEmploymentType'] == i, 'LastName'].tolist()
 
-executives_png = 'executives.png'
+executives_png = 'exec.png'
 IT_png = 'IT.png'
 Engg_png = 'Engg.png'
-Fac_png = 'Facilities.png'
-Sec_png = 'Security.png'
+Fac_png = 'fac.png'
+Sec_png = 'security.png'
 test_1 = base64.b64encode(open(executives_png, 'rb').read()).decode('ascii')
 test_2 = base64.b64encode(open(IT_png, 'rb').read()).decode('ascii')
 test_3 = base64.b64encode(open(Engg_png, 'rb').read()).decode('ascii')
@@ -268,8 +268,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Dropdown(
                 id='engg',
-                options=[{'label': x, 'value': x} for x in Engineering] + [
-                    {'label': 'Select all', 'value': 'all_values'}],
+                options=[{'label': x, 'value': x} for x in Engineering],
                 value=[],
                 multi=True,
             )
@@ -277,9 +276,8 @@ app.layout = html.Div([
             className='six columns'),
         html.Div([
             dcc.Dropdown(
-                id='exec',
-                options=[{'label': x, 'value': x} for x in Executive] + [
-                    {'label': 'Select all', 'value': 'all_values'}],
+                id='exect',
+                options=[{'label': x, 'value': x} for x in Executive],
                 value=[],
                 multi=True,
             )
@@ -288,8 +286,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Dropdown(
                 id='facil',
-                options=[{'label': x, 'value': x} for x in Facilities] + [
-                    {'label': 'Select all', 'value': 'all_values'}],
+                options=[{'label': x, 'value': x} for x in Facilities],
                 value=[],
                 multi=True,
             )
@@ -298,8 +295,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Dropdown(
                 id='IT',
-                options=[{'label': x, 'value': x} for x in Information_Technology] + [
-                    {'label': 'Select all', 'value': 'all_values'}],
+                options=[{'label': x, 'value': x} for x in Information_Technology],
                 value=[],
                 multi=True,
             )
@@ -309,7 +305,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Dropdown(
                 id='security',
-                options=[{'label': x, 'value': x} for x in Security] + [{'label': 'Select all', 'value': 'all_values'}],
+                options=[{'label': x, 'value': x} for x in Security],
                 value=[],
                 multi=True,
             )
@@ -320,6 +316,7 @@ app.layout = html.Div([
     # div for adj_martix, subject table, timeline, checkbox, tod filter
     html.Div([
         html.Div([
+            html.H4('Emails heatmap'),
             dcc.Graph(id='graph', figure=fig, clickData=None),
             dcc.Dropdown(id='dropdown', options=tod, value=None),
             dcc.Checklist(
@@ -335,15 +332,8 @@ app.layout = html.Div([
         ], className='six columns'),
 
         html.Div([
+            html.H4('Number of emails'),
             dcc.Graph(id='communication'),
-            html.Label("Choose a date range for 1"),
-            dcc.RangeSlider(
-                id="date",
-                min=6,
-                max=17,
-                value=[6, 17],
-                marks={str(i): {'label': str(i), 'style': {'color': 'white'}} for i in days},
-            )
         ], className='six columns'),
 
     ], className='row'),
@@ -351,11 +341,12 @@ app.layout = html.Div([
     html.Div([
     # word cloud
     html.Div([
-        html.H5("Email Headers WordCloud"),
+        html.H4("Email Headers WordCloud"),
         html.Img(id="image_wc", style={'padding': 10})
     ], className='six columns'),
 
     html.Div([
+    html.H4('Emails subjects'),
         dash_table.DataTable(id='subject', page_size=5, style_data={
             'whiteSpace': 'normal',
             'height': 'auto',
@@ -367,20 +358,81 @@ app.layout = html.Div([
     # div for articles
     html.Div([
         html.Div([
-            html.H3('Sentiment Classification of Articles'),
-            dcc.Graph(id='sentiment-graph', figure=fig1, clickData=None),
+            html.H4('Sentiment Classification of Articles'),
+            dcc.Graph(id='sentiment-graph', style={'width': '100vh', 'height': '75vh'},figure=fig1, clickData=None),
+dcc.Checklist(
+                id='checklist2',
+                options=[
+                    {'label': 'Protectors of Kronos',
+                     'value': 'Protectors of Kronos'},
+                    {'label': 'Sanjorge',
+                     'value': 'Sanjorge'},
+                    {'label': 'Emergency',
+                     'value': 'Emergency'},
+                    {'label': 'Voices - 20 January 2014',
+                     'value': 'Voices - 20 January 2014'}
+                ],
+                value=[],
+                inline=True
+            )
         ],className='six columns'),
         html.Div([
-            html.H3('Articles WordCloud'),
-            dcc.Graph(id='wordcloud-graph', figure=fig2, clickData=None),
+            html.H4('Articles WordCloud'),
+            dcc.Graph(id='wordcloud-graph', style={'width': '100vh', 'height': '75vh'}, figure=fig2, clickData=None),
         ],className='six columns')
     ],className='row')
 ])
+
+
 @app.callback(
-        Output('image_wc', 'src'),
-        [Input('image_wc', 'id')])
-def plot_wordcloud(data):
-    allWords = ' '.join([word for word in df_subject['Subject']])
+    Output('image_wc', 'src'),
+    [Input('image_wc', 'id'),
+     Input('graph', 'clickData'),
+     Input("dropdown", "value"),
+     Input("checklist", "value"),
+     Input("engg", "value"),
+     Input("exect", "value"),
+     Input("facil", "value"),
+     Input("IT", "value"),
+     Input("security", "value")])
+def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security):
+    join_list = engg + exect + facil + IT + security
+    print("XXXXXXXXXXXXXXXX")
+    print(join_list)
+    # ctx = dash.callback_context
+    # recent = ctx.triggered[0]['prop_id'].split('.')[0]
+    if join_list != []:
+        df = final[final['LastName_From'].isin(join_list)]
+        df['Subject'] = df['Subject'].str.replace("RE: ", "")
+        df['Subject'] = df['Subject'].str.replace("FW: ", "")
+        if checklist == ["Communication between different departments"]:
+            df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To']]
+        if tod != None:
+            df = df[df['Time_of_day'] == tod]
+        if gra != None:
+            person_from = gra['points'][0]['y']
+            person_to = gra['points'][0]['x']
+            if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                df = df[df['LastName_From'] == person_from]
+            else:
+                df = df[df['CurrentEmploymentType_From'] == person_from]
+            df = df[df['CurrentEmploymentType_To'] == person_to]
+
+        allWords = ' '.join([word for word in df['Subject']])
+
+    elif join_list == [] and gra != None:
+        person_from = gra['points'][0]['y']
+        person_to = gra['points'][0]['x']
+        if (final['CurrentEmploymentType_From'] == person_from).eq(False).all():
+            df = final[final['LastName_From'] == person_from]
+        else:
+            df = final[final['CurrentEmploymentType_From'] == person_from]
+        df = final[final['CurrentEmploymentType_From'] == person_to]
+        allWords = ' '.join([word for word in df['Subject']])
+
+    else:
+        allWords = ' '.join([word for word in final['Subject']])
+
     wc = WordCloud(width=500, height=300, random_state=21, max_font_size=115).generate(allWords)
     new = wc.to_image()
     img = BytesIO()
@@ -390,25 +442,21 @@ def plot_wordcloud(data):
 
 @app.callback(
     Output("graph", "figure"),
-    [Input("date", "value"),
-     Input("dropdown", "value"),
+    [Input("dropdown", "value"),
      Input("checklist", "value"),
      Input("engg","value"),
-     Input("exec","value"),
+     Input("exect","value"),
      Input("facil","value"),
      Input("IT","value"),
      Input("security","value")])
-def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
+def update_adj_marix(tod, checklist,engg, exec, facil, it, security):
     join_list = engg + exec + facil + it + security
     if join_list != []:
+        df = final[final['LastName_From'].isin(join_list)]
         if checklist == ["Communication between different departments"]:
-            df = final[final['CurrentEmploymentType_From'] != final['CurrentEmploymentType_To']]
-            df = df[df['day'].between(day[0], day[1])]
-        else:
-            df = final[final['day'].between(day[0], day[1])]
+            df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To']]
         if tod != None:
             df = df[df['Time_of_day'] == tod]
-        df = df[df['LastName_From'].isin(join_list)]
         graphdf_names = df[['LastName_From', 'CurrentEmploymentType_To', 'count']]
         pivot = pd.pivot_table(graphdf_names, values='count', index='LastName_From',
                                columns='CurrentEmploymentType_To',
@@ -418,11 +466,9 @@ def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
         fig = px.imshow(pivot, width=600, height=600, color_continuous_scale='gray_r')
         return fig
     else:
+        df = final.copy()
         if checklist == ["Communication between different departments"]:
             df = final[final['CurrentEmploymentType_From'] != final['CurrentEmploymentType_To']]
-            df = df[df['day'].between(day[0], day[1])]
-        else:
-            df = final[final['day'].between(day[0], day[1])]
         if tod != None:
             df = df[df['Time_of_day'] == tod]
 
@@ -440,7 +486,7 @@ def update_adj_marix(day, tod, checklist,engg, exec, facil, it, security):
     Output("communication", "figure"),
     [Input("graph", "clickData"),
      Input("engg", "value"),
-     Input("exec", "value"),
+     Input("exect", "value"),
      Input("facil", "value"),
      Input("IT", "value"),
      Input("security", "value")
@@ -475,7 +521,6 @@ def update_timeline(people,engg, exec, facil, it, security):
         only_dates = only_dates.reindex(idx, fill_value=0)
 
         only_dates.reset_index(inplace=True)
-        print(only_dates)
 
         fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative',
                      title=f'Communication: From: {person_from} To {person_to}')
@@ -490,25 +535,16 @@ def update_timeline(people,engg, exec, facil, it, security):
             df = final[final['LastName_From'].isin(join_list)]
             df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
             only_dates = df.drop_duplicates(subset='just_date', keep="first")
-            print("before")
-            print(only_dates)
+
             only_dates= only_dates[['just_date','dates_count']]
-            print("afteeer1")
-            print(only_dates)
+
             only_dates.set_index('just_date',inplace=True)
-            print("afteeer2")
-            print(only_dates)
+
             only_dates.index = pd.DatetimeIndex(only_dates.index)
-            print("afteeer3")
-            print(only_dates)
 
             only_dates = only_dates.reindex(idx, fill_value=0)
-            print("afteeer4")
-            print(only_dates)
 
             only_dates.reset_index(inplace=True)
-            print("afteeer5")
-            print(only_dates)
 
 
             fig = px.bar(only_dates, x="index", y="dates_count", barmode= 'relative',
@@ -516,45 +552,13 @@ def update_timeline(people,engg, exec, facil, it, security):
 
             return fig
 
-    # if join_list != []:
-    #     df = final[final['LastName_From'].isin(join_list)]
-    #     df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
-    #     only_dates = df.drop_duplicates(subset='just_date', keep="first")
-    #
-    #     fig = px.bar(only_dates, x="just_date", y="dates_count", barmode= 'relative',
-    #                   title=f'Communication: From: {join_list} to all departments')
-    #
-    #     return fig
-    # if people == None:
-    #     only_dates = df.drop_duplicates(subset='dates_count', keep="first")
-    #     fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication')
-    #     return fig
-    # else:
-    #     person_from = people['points'][0]['y']
-    #     person_to = people['points'][0]['x']
-    #     if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
-    #         dff = df[df['LastName_From'] == person_from]
-    #     else:
-    #         dff = df[df['CurrentEmploymentType_From'] == person_from]
-    #
-    #     final_df = dff[dff['CurrentEmploymentType_To'] == person_to]
-    #
-    #     final_df['dates_count'] = final_df.groupby('just_date')['just_date'].transform('count')
-    #     only_dates = final_df.drop_duplicates(subset='just_date', keep="first")
-    #
-    #     fig = px.bar(only_dates, x="just_date", y="dates_count", barmode= 'relative',
-    #                   title=f'Communication: From: {person_from} To {person_to}')
-    #
-    #     return fig
-
 @app.callback(
     Output("subject", "data"),
     [Input("graph", "clickData"),
-     Input("date", "value"),
      Input("dropdown", "value"),
      Input("checklist", "value")])
-def update_subject(people, day, tod, checklist):
-    df = merge_original_from[merge_original_from['day'].between(day[0], day[1])]
+def update_subject(people, tod, checklist):
+    df = merge_original_from.copy()
     if people != None:
         if tod != None:
             print(people)
@@ -593,6 +597,133 @@ def update_subject(people, day, tod, checklist):
         else:
             return getData(df_emails_original)
 
+@app.callback(
+    [Output("sentiment-graph", "figure"),
+     Output("wordcloud-graph", "figure")],
+    [Input("checklist2", "value"),
+     Input("sentiment-graph", "clickData")]
+)
+def update_articles(checklist_values,clickData):
+    ctx = dash.callback_context
+    clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
 
+    if clicked_element == "checklist2":
+
+        if checklist_values:
+            articles_filtered = articles_final[articles_final['cluster'].isin(checklist_values)]
+        else:
+            articles_filtered = articles_final
+
+        color_discrete_map = {'Negative': 'rgb(255,0,0)', 'Positive': 'rgb(0,255,0)', 'Neutral': 'rgb(0,0,255)'}
+        fig1 = px.scatter(articles_filtered, x="dates", y="Polarity", color='Sentiment',
+                          color_discrete_map=color_discrete_map,
+                          hover_data=['article_number', 'article_title'])
+
+        article_num_list = list(articles_filtered['article_number'])
+        articles_wc = articles_wordcloud[articles_wordcloud['article_number'].isin(article_num_list)]
+        word_list = []
+        for i in range(len(articles_wc)):
+            article_list = articles_wc['content'].iloc[i]
+            article_list = article_list.split()
+            word_list += article_list
+
+        word_counts = Counter(word_list)
+        word_counts = word_counts.most_common(60)
+
+        words_bag = []
+        freqs = []
+        for i in range(len(word_counts)):
+            words_bag.append(word_counts[i][0])
+            freqs.append(word_counts[i][1])
+
+        lower, upper = 10, 60
+        freqs = [((x - min(freqs)) / (max(freqs) - min(freqs))) * (upper - lower) + lower for x in freqs]
+
+        colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(len(words_bag))]
+        weights = freqs
+
+        data = go.Scatter(x=[random.uniform(0, 1) for i in range(len(words_bag))],
+                          y=[random.uniform(0, 1) for i in range(len(words_bag))],
+                          mode='text',
+                          text=words_bag,
+                          marker={'opacity': 0.3},
+                          textfont={'size': weights, 'color': colors})
+        layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
+                            'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False}})
+
+        fig2 = go.Figure(data=[data], layout=layout)
+
+        return fig1, fig2
+    else:
+
+        if checklist_values:
+
+            articles_filtered = articles_final[articles_final['cluster'].isin(checklist_values)]
+
+            if clickData is not None:
+
+                click_article_num = clickData['points'][0]['customdata'][0]
+                click_article_title = clickData['points'][0]['customdata'][1]
+                articles_wc = articles_wordcloud[articles_wordcloud['article_number'] == click_article_num]
+
+            else:
+
+                article_num_list = list(articles_filtered['article_number'])
+                articles_wc = articles_wordcloud[articles_wordcloud['article_number'].isin(article_num_list)]
+
+        else:
+
+            articles_filtered = articles_final
+
+            if clickData is not None:
+
+                click_article_num = clickData['points'][0]['customdata'][0]
+                click_article_title = clickData['points'][0]['customdata'][1]
+                articles_wc = articles_wordcloud[articles_wordcloud['article_number'] == click_article_num]
+
+            else:
+
+                article_num_list = list(articles_filtered['article_number'])
+                articles_wc = articles_wordcloud[articles_wordcloud['article_number'].isin(article_num_list)]
+
+
+        color_discrete_map = {'Negative': 'rgb(255,0,0)', 'Positive': 'rgb(0,255,0)', 'Neutral': 'rgb(0,0,255)'}
+        fig1 = px.scatter(articles_filtered, x="dates", y="Polarity", color='Sentiment', color_discrete_map=color_discrete_map,
+                              hover_data=['article_number','article_title'])
+
+
+        word_list = []
+        for i in range(len(articles_wc)):
+            article_list = articles_wc['content'].iloc[i]
+            article_list = article_list.split()
+            word_list += article_list
+
+        word_counts = Counter(word_list)
+        word_counts = word_counts.most_common(60)
+
+        words_bag = []
+        freqs = []
+        for i in range(len(word_counts)):
+            words_bag.append(word_counts[i][0])
+            freqs.append(word_counts[i][1])
+
+        lower, upper = 10, 60
+        freqs = [((x - min(freqs)) / (max(freqs) - min(freqs))) * (upper - lower) + lower for x in freqs]
+
+        colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(len(words_bag))]
+        weights = freqs
+
+        data = go.Scatter(x=[random.uniform(0, 1) for i in range(len(words_bag))],
+                          y=[random.uniform(0, 1) for i in range(len(words_bag))],
+                          mode='text',
+                          text=words_bag,
+                          marker={'opacity': 0.3},
+                          textfont={'size': weights, 'color': colors})
+        layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
+                            'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False}})
+
+        fig2 = go.Figure(data=[data], layout=layout)
+
+        return fig1,fig2
 if __name__ == '__main__':
     app.run_server()
