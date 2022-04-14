@@ -44,21 +44,32 @@ def getData(df):
 df_emails_original = pd.read_csv('3.Disappearance at GAStech/data/data/email headers.csv', encoding='cp1252')
 df_employees = pd.read_excel('3.Disappearance at GAStech/data/data/EmployeeRecords.xlsx')
 
+df_emails_original.To = df_emails_original.To.str.replace(' ', '')
+df_emails_original.From = df_emails_original.From.str.replace(' ', '')
+df_employees.EmailAddress = df_employees.EmailAddress.str.replace(' ', '')
+
 # Get only emails out of names
 df_emails_original['From_Name'] = df_emails_original['From'].apply(lambda x: x.split('@')[0])
 df_emails_original['From_Name'] = df_emails_original['From_Name'].apply(lambda x: x.replace("."," "))
 
 df_emails_original['To_Name'] = df_emails_original['To'].apply(lambda x: x.split(','))
+df_emails_original['CurrentEmploymentType_To_List'] = df_emails_original['To'].apply(lambda x: x.split(','))
 
 for emails in df_emails_original['To_Name']:
     names = []
+    employee_to = []
     for email in emails:
-        names.append(email.split('@')[0].replace("."," "))
+        first_name = df_employees.loc[df_employees['EmailAddress'] == email, 'FirstName'].iloc[0]
+        last_name = df_employees.loc[df_employees['EmailAddress'] == email, 'LastName'].iloc[0]
+        employee_type = df_employees.loc[df_employees['EmailAddress'] == email, 'CurrentEmploymentType'].iloc[0]
+        names.append(last_name + ' ' + first_name)
+        employee_to.append(employee_type)
     indices = df_emails_original.loc[df_emails_original['To_Name'].isin([emails])].index.values.tolist()
     if len(names) == 54:
         df_emails_original.loc[indices, 'To_Name'] = 'All'
     else:
         df_emails_original.loc[indices, 'To_Name'] = [names]
+    df_emails_original.loc[indices, 'CurrentEmploymentType_To_List'] = [employee_to]
 
 # Create employees list
 dept = df_employees['CurrentEmploymentType'].unique().tolist()
@@ -333,7 +344,7 @@ app.layout = html.Div([
 
         html.Div([
             html.H4('Number of emails'),
-            dcc.Graph(id='communication'),
+            dcc.Graph(id='communication', clickData = None),
         ], className='six columns'),
 
     ], className='row'),
@@ -397,8 +408,7 @@ dcc.Checklist(
      Input("security", "value")])
 def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security):
     join_list = engg + exect + facil + IT + security
-    print("XXXXXXXXXXXXXXXX")
-    print(join_list)
+
     # ctx = dash.callback_context
     # recent = ctx.triggered[0]['prop_id'].split('.')[0]
     if join_list != []:
@@ -449,8 +459,8 @@ def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security):
      Input("facil","value"),
      Input("IT","value"),
      Input("security","value")])
-def update_adj_marix(tod, checklist,engg, exec, facil, it, security):
-    join_list = engg + exec + facil + it + security
+def update_adj_marix(tod, checklist,engg, exect, facil, it, security):
+    join_list = engg + exect + facil + it + security
     if join_list != []:
         df = final[final['LastName_From'].isin(join_list)]
         if checklist == ["Communication between different departments"]:
@@ -489,18 +499,31 @@ def update_adj_marix(tod, checklist,engg, exec, facil, it, security):
      Input("exect", "value"),
      Input("facil", "value"),
      Input("IT", "value"),
-     Input("security", "value")
+     Input("security", "value"),
+     Input("checklist", "value")
      ])
-def update_timeline(people,engg, exec, facil, it, security):
+def update_timeline(people,engg, exect, facil, it, security, checklist):
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
-    join_list = engg + exec + facil + it + security
+    join_list = engg + exect + facil + it + security
     df = final.copy()
 
+    checklist_value = 'all departments'
+
+    if checklist == ["Communication between different departments"]:
+        df = final[final['CurrentEmploymentType_From'] != final['CurrentEmploymentType_To']]
+        df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
+        checklist_value = 'different departments'
+
     if people == None and join_list == []:
-        only_dates = df.drop_duplicates(subset='dates_count', keep="first")
-        fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication')
-        return fig
+        if checklist == ["Communication between different departments"]:
+            only_dates = df.drop_duplicates(subset='dates_count', keep="first")
+            fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication between different departments')
+            return fig
+        else:
+            only_dates = df.drop_duplicates(subset='dates_count', keep="first")
+            fig = px.bar(only_dates, x="just_date", y="dates_count",barmode= 'relative', title='Communication between all departments')
+            return fig
 
     if clicked_element == 'graph':
         person_from = people['points'][0]['y']
@@ -529,10 +552,10 @@ def update_timeline(people,engg, exec, facil, it, security):
     else:
         if join_list == []:
             only_dates = df.drop_duplicates(subset='dates_count', keep="first")
-            fig = px.bar(only_dates, x="just_date", y="dates_count", barmode='relative', title='Communication')
+            fig = px.bar(only_dates, x="just_date", y="dates_count", barmode='relative', title=f'Communication {checklist_value}')
             return fig
         else:
-            df = final[final['LastName_From'].isin(join_list)]
+            df = df[df['LastName_From'].isin(join_list)]
             df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
             only_dates = df.drop_duplicates(subset='just_date', keep="first")
 
@@ -548,7 +571,7 @@ def update_timeline(people,engg, exec, facil, it, security):
 
 
             fig = px.bar(only_dates, x="index", y="dates_count", barmode= 'relative',
-                          title=f'Communication: From: {join_list} to all departments')
+                          title=f'Communication: From: {join_list} to {checklist_value}')
 
             return fig
 
@@ -556,47 +579,86 @@ def update_timeline(people,engg, exec, facil, it, security):
     Output("subject", "data"),
     [Input("graph", "clickData"),
      Input("dropdown", "value"),
-     Input("checklist", "value")])
-def update_subject(people, tod, checklist):
-    df = merge_original_from.copy()
-    if people != None:
+     Input("checklist", "value"),
+     Input("communication", "clickData"),
+     Input("engg", "value"),
+     Input("exect", "value"),
+     Input("facil", "value"),
+     Input("IT", "value"),
+     Input("security", "value")
+     ])
+def update_subject(people, tod, checklist, communication, engg, exect, facil, it, security):
+    ctx = dash.callback_context
+    clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
+    join_list = engg + exect + facil + it + security
+    # if checklist == ["Communication between different departments"]:
+    #     df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To']]
+    if clicked_element in ['engg', 'exect', 'facil', 'IT', 'security']:
+        print("befooore")
+        print(clicked_element)
+        print(join_list)
+        df = merge_original_from[merge_original_from['LastName_From'].isin(join_list)]
         if tod != None:
-            print(people)
+            final_df = df[df['Time_of_day'] == tod]
+            return getData(final_df)
+        else:
+            return getData(df)
+    elif clicked_element == 'graph':
+        if tod != None:
+            df = merge_original_from[merge_original_from['Time_of_day'] == tod]
             person_from = people['points'][0]['y']
             person_to = people['points'][0]['x']
-            print(person_from)
-            print(person_to)
-            dff = merge_original_from[merge_original_from['CurrentEmploymentType_From'].str.contains(person_from)]
-            final_df = dff[dff['CurrentEmploymentType_To'].str.contains(person_to)]
-
-            list_of_emails_from = final_df['From'].values
-            list_of_emails_to = final_df['To'].values
-
-            df = df[df['Time_of_day'] == tod]
-            df = df[df['From'].isin(list_of_emails_from)]
-            final_df = df['To'].apply(lambda x: any([k in x for k in list_of_emails_to]))
+            if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                dff = df[df['LastName_From'] == person_from]
+            else:
+                dff = df[df['CurrentEmploymentType_From'] == person_from]
+            final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+            final_df = dff[final_df_values]
 
             return getData(final_df)
         else:
             person_from = people['points'][0]['y']
             person_to = people['points'][0]['x']
-            dff = final[final['CurrentEmploymentType_From'].str.contains(person_from)]
-            final_df = dff[dff['CurrentEmploymentType_To'].str.contains(person_to)]
-
-            list_of_emails_from = final_df['From'].values
-            list_of_emails_to = final_df['To'].values
-
-            final_df = df[df['From'].isin(list_of_emails_from)]
-
-            # final_df = df['To'].apply(lambda x: any([k in x for k in list_of_emails_to]))
+            if (merge_original_from['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                dff = merge_original_from[merge_original_from['LastName_From'] == person_from]
+            else:
+                dff = merge_original_from[merge_original_from['CurrentEmploymentType_From'] == person_from]
+            # dff = df[df['CurrentEmploymentType_From'].str.contains(person_from)]
+            final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+            final_df = dff[final_df_values]
 
             return getData(final_df)
     else:
-        if tod != None:
-            return getData(df_emails_original[df_emails_original['Time_of_day'] == tod])
-        else:
-            return getData(df_emails_original)
+        if people != None:
+            if tod != None:
+                df = merge_original_from[merge_original_from['Time_of_day'] == tod]
+                person_from = people['points'][0]['y']
+                person_to = people['points'][0]['x']
+                if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                    dff = df[df['LastName_From'] == person_from]
+                else:
+                    dff = df[df['CurrentEmploymentType_From'] == person_from]
+                final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+                final_df = dff[final_df_values]
 
+                return getData(final_df)
+            else:
+                person_from = people['points'][0]['y']
+                person_to = people['points'][0]['x']
+                if (merge_original_from['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                    dff = merge_original_from[merge_original_from['LastName_From'] == person_from]
+                else:
+                    dff = merge_original_from[merge_original_from['CurrentEmploymentType_From'] == person_from]
+                # dff = df[df['CurrentEmploymentType_From'].str.contains(person_from)]
+                final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+                final_df = dff[final_df_values]
+
+                return getData(final_df)
+        else:
+            if tod != None:
+                return getData(merge_original_from[merge_original_from['Time_of_day'] == tod])
+            else:
+                return getData(merge_original_from)
 @app.callback(
     [Output("sentiment-graph", "figure"),
      Output("wordcloud-graph", "figure")],
