@@ -71,6 +71,8 @@ for emails in df_emails_original['To_Name']:
         df_emails_original.loc[indices, 'To_Name'] = [names]
     df_emails_original.loc[indices, 'CurrentEmploymentType_To_List'] = [employee_to]
 
+df_emails_original['CurrentEmploymentType_To_Unique'] = df_emails_original['CurrentEmploymentType_To_List'].apply(lambda x: pd.unique(x))
+
 # Create employees list
 dept = df_employees['CurrentEmploymentType'].unique().tolist()
 for i in dept:
@@ -149,6 +151,8 @@ df_employees_to = df_employees.add_suffix('_To')
 # Merge original data with From
 merge_original_from = pd.merge(df_emails_original, df_employees_from, how='left', left_on='From',
                                right_on='EmailAddress_From')
+
+merge_original_from['CurrentEmploymentType_To_Unlisted'] = merge_original_from['CurrentEmploymentType_To_Unique'].apply(lambda x: x[0] if len(x)==1 else 'Not unique department')
 
 # Merge emails data with From
 merge_from = pd.merge(df_emails, df_employees_from, how='left', left_on='From', right_on='EmailAddress_From')
@@ -591,13 +595,12 @@ def update_subject(people, tod, checklist, communication, engg, exect, facil, it
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
     join_list = engg + exect + facil + it + security
-    # if checklist == ["Communication between different departments"]:
-    #     df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To']]
+    if checklist == ["Communication between different departments"]:
+        df = merge_original_from[merge_original_from['CurrentEmploymentType_From'] != merge_original_from['CurrentEmploymentType_To_Unlisted']]
+    else:
+        df = merge_original_from.copy()
     if clicked_element in ['engg', 'exect', 'facil', 'IT', 'security']:
-        print("befooore")
-        print(clicked_element)
-        print(join_list)
-        df = merge_original_from[merge_original_from['LastName_From'].isin(join_list)]
+        df = df[df['LastName_From'].isin(join_list)]
         if tod != None:
             final_df = df[df['Time_of_day'] == tod]
             return getData(final_df)
@@ -605,60 +608,60 @@ def update_subject(people, tod, checklist, communication, engg, exect, facil, it
             return getData(df)
     elif clicked_element == 'graph':
         if tod != None:
-            df = merge_original_from[merge_original_from['Time_of_day'] == tod]
+            df = df[df['Time_of_day'] == tod]
             person_from = people['points'][0]['y']
             person_to = people['points'][0]['x']
             if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
                 dff = df[df['LastName_From'] == person_from]
             else:
                 dff = df[df['CurrentEmploymentType_From'] == person_from]
-            final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+            final_df_values = dff['CurrentEmploymentType_To_Unique'].apply(lambda employee: person_to in employee)
             final_df = dff[final_df_values]
 
             return getData(final_df)
         else:
             person_from = people['points'][0]['y']
             person_to = people['points'][0]['x']
-            if (merge_original_from['CurrentEmploymentType_From'] == person_from).eq(False).all():
-                dff = merge_original_from[merge_original_from['LastName_From'] == person_from]
+            if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                dff = df[df['LastName_From'] == person_from]
             else:
-                dff = merge_original_from[merge_original_from['CurrentEmploymentType_From'] == person_from]
+                dff = df[df['CurrentEmploymentType_From'] == person_from]
             # dff = df[df['CurrentEmploymentType_From'].str.contains(person_from)]
-            final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+            final_df_values = dff['CurrentEmploymentType_To_Unique'].apply(lambda employee: person_to in employee)
             final_df = dff[final_df_values]
 
             return getData(final_df)
     else:
         if people != None:
             if tod != None:
-                df = merge_original_from[merge_original_from['Time_of_day'] == tod]
+                df = df[df['Time_of_day'] == tod]
                 person_from = people['points'][0]['y']
                 person_to = people['points'][0]['x']
                 if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
                     dff = df[df['LastName_From'] == person_from]
                 else:
                     dff = df[df['CurrentEmploymentType_From'] == person_from]
-                final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+                final_df_values = dff['CurrentEmploymentType_To_Unique'].apply(lambda employee: person_to in employee)
                 final_df = dff[final_df_values]
 
                 return getData(final_df)
             else:
                 person_from = people['points'][0]['y']
                 person_to = people['points'][0]['x']
-                if (merge_original_from['CurrentEmploymentType_From'] == person_from).eq(False).all():
-                    dff = merge_original_from[merge_original_from['LastName_From'] == person_from]
+                if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                    dff = df[df['LastName_From'] == person_from]
                 else:
-                    dff = merge_original_from[merge_original_from['CurrentEmploymentType_From'] == person_from]
+                    dff = df[df['CurrentEmploymentType_From'] == person_from]
                 # dff = df[df['CurrentEmploymentType_From'].str.contains(person_from)]
-                final_df_values = dff['CurrentEmploymentType_To_List'].apply(lambda employee: person_to in employee)
+                final_df_values = dff['CurrentEmploymentType_To_Unique'].apply(lambda employee: person_to in employee)
                 final_df = dff[final_df_values]
 
                 return getData(final_df)
         else:
             if tod != None:
-                return getData(merge_original_from[merge_original_from['Time_of_day'] == tod])
+                return getData(df[df['Time_of_day'] == tod])
             else:
-                return getData(merge_original_from)
+                return getData(df)
 @app.callback(
     [Output("sentiment-graph", "figure"),
      Output("wordcloud-graph", "figure")],
