@@ -515,8 +515,7 @@ def render_content(tab):
 
 @app.callback(
     Output('image_wc', 'src'),
-    [
-     Input('graph', 'clickData'),
+    [Input('graph', 'clickData'),
      Input("dropdown", "value"),
      Input("checklist", "value"),
      Input("engg", "value"),
@@ -582,6 +581,7 @@ def plot_wordcloud(gra, tod, checklist, engg, exect, facil, IT, security, radio,
         df = merge_original_from.copy()
 
         if comm != None:
+            df = df.loc[df['just_date']==comm['points'][0]['x']]
         if checklist == "Communication between different departments":
             df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To_Unlisted']]
         if tod != 'both':
