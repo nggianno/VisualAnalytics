@@ -1,0 +1,5 @@
+
+
+
+(!) Click on an dot in the Sentiment Analysis graph to display the content of specific article (!)
+
