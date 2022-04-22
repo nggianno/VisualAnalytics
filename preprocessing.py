@@ -330,7 +330,7 @@ articles_df['content']= articles_df['content'].apply(lambda x:remove_stopwords(x
 print("Remove lemmas..")
 articles_df['content'] = articles_df['content'].apply(lambda x:lemmatizer(x))
 
-
+#word frequency
 def word_freq(str_list):
     new_article = []
     # gives set of unique words

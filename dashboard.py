@@ -55,6 +55,8 @@ merge_original_from = pd.read_csv('csvs/merge_original_from.csv',index_col=[0])
 
 
 ### ARTICLES PREPROCESSING ###
+
+#read preprocessed datasets
 articles_final = pd.read_csv('csvs/articles_final.csv')
 articles_final.sort_values(by='article_number',inplace = True)
 articles_wordcloud = pd.read_csv('csvs/articles_wordcloud.csv')
@@ -723,6 +725,38 @@ def update_timeline(people,engg, exect, facil, it, security, tod, checklist, com
             df = df[df['LastName_From'].isin(join_list)]
             person_from = join_list
             person_to = checklist_value
+            df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
+            only_dates = df.drop_duplicates(subset='just_date', keep="first")
+
+            only_dates = only_dates[['just_date', 'dates_count']]
+
+            only_dates.set_index('just_date', inplace=True)
+
+            only_dates.index = pd.DatetimeIndex(only_dates.index)
+
+            only_dates = only_dates.reindex(idx, fill_value=0)
+
+            only_dates.reset_index(inplace=True)
+
+            colors = []
+            for value in only_dates['index']:
+                if comm['points'][0]['x'] == str(value.date()):
+                    colors.append('#d3dedc')
+                else:
+                    colors.append('#218173')
+
+            fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative', color=colors,
+                         color_discrete_map="identity")
+
+            fig.update_layout(
+                title=f'Communication: From: {person_from} To {person_to}',
+                xaxis_title="Dates",
+                yaxis_title="Number of emails",  # paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+            fig.update_xaxes(showline=True, linewidth=2, linecolor='black')
+            fig.update_yaxes(showline=True, linewidth=2, linecolor='black')
+            return fig
         if people!= None:
             person_from = people['points'][0]['y']
             person_to = people['points'][0]['x']
@@ -733,38 +767,38 @@ def update_timeline(people,engg, exect, facil, it, security, tod, checklist, com
 
             df = dff[dff['CurrentEmploymentType_To'] == person_to]
 
-        df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
-        only_dates = df.drop_duplicates(subset='just_date', keep="first")
+            df['dates_count'] = df.groupby('just_date')['just_date'].transform('count')
+            only_dates = df.drop_duplicates(subset='just_date', keep="first")
 
-        only_dates = only_dates[['just_date', 'dates_count']]
+            only_dates = only_dates[['just_date', 'dates_count']]
 
-        only_dates.set_index('just_date', inplace=True)
+            only_dates.set_index('just_date', inplace=True)
 
-        only_dates.index = pd.DatetimeIndex(only_dates.index)
+            only_dates.index = pd.DatetimeIndex(only_dates.index)
 
-        only_dates = only_dates.reindex(idx, fill_value=0)
+            only_dates = only_dates.reindex(idx, fill_value=0)
 
-        only_dates.reset_index(inplace=True)
+            only_dates.reset_index(inplace=True)
 
-        colors = []
-        for value in only_dates['index']:
-            if comm['points'][0]['x'] == str(value.date()):
-                colors.append('#d3dedc')
-            else:
-                colors.append('#218173')
+            colors = []
+            for value in only_dates['index']:
+                if comm['points'][0]['x'] == str(value.date()):
+                    colors.append('#d3dedc')
+                else:
+                    colors.append('#218173')
 
-        fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative', color=colors,
-                     color_discrete_map="identity")
+            fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative', color=colors,
+                         color_discrete_map="identity")
 
-        fig.update_layout(
-            title=f'Communication: From: {person_from} To {person_to}',
-            xaxis_title="Dates",
-            yaxis_title="Number of emails" , #  paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-        )
-        fig.update_xaxes(showline=True, linewidth=2, linecolor='black')
-        fig.update_yaxes(showline=True, linewidth=2, linecolor='black')
-        return fig
+            fig.update_layout(
+                title=f'Communication: From: {person_from} To {person_to}',
+                xaxis_title="Dates",
+                yaxis_title="Number of emails" , #  paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+            )
+            fig.update_xaxes(showline=True, linewidth=2, linecolor='black')
+            fig.update_yaxes(showline=True, linewidth=2, linecolor='black')
+            return fig
 
     if clicked_element == 'graph':
         if tod != 'both':
@@ -984,6 +1018,7 @@ def update_timeline(people,engg, exect, facil, it, security, tod, checklist, com
 def update_subject(people, tod, checklist, comm, engg, exect, facil, it, security):
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
+    #join dropdown box values
     join_list = engg + exect + facil + it + security
     if checklist == "Communication between different departments":
         df = merge_original_from[merge_original_from['CurrentEmploymentType_From'] != merge_original_from['CurrentEmploymentType_To_Unlisted']]
@@ -1086,6 +1121,7 @@ def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
 
+    #perform filtering and interaction based on the selected items from checklist
     if clicked_element == "checklist2":
 
         if checklist_values:
