@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
 import nltk
 from wordcloud import WordCloud
 import dash_html_components as html
@@ -26,9 +25,10 @@ from dash_iconify import DashIconify
 def getData(df):
     return df.to_dict('rows')
 
-
+# Read employee records from csv
 df_employees = pd.read_excel('csvs/EmployeeRecords.xlsx')
 
+# Import the appropriate images to create the organograms at the top of the dashboard
 executives_png = 'pngs/exec.png'
 IT_png = 'pngs/IT.png'
 Engg_png = 'pngs/Engg.png'
@@ -50,21 +50,20 @@ stopwords = nltk.corpus.stopwords.words('english')
 stopwords.append('of')
 stopwords.append('hey')
 
+# Import the csv files with emails and employeeRecords preprocessed
 final = pd.read_csv('csvs/final.csv',index_col=[0])
 merge_original_from = pd.read_csv('csvs/merge_original_from.csv',index_col=[0])
 
 
-### ARTICLES PREPROCESSING ###
-
-#read preprocessed datasets
+# Import the preprocessed datasets for articles
 articles_final = pd.read_csv('csvs/articles_final.csv')
 articles_final.sort_values(by='article_number',inplace = True)
 articles_wordcloud = pd.read_csv('csvs/articles_wordcloud.csv')
 
 article_list1 = articles_wordcloud['content'].iloc[1]
 article_list1 = article_list1.split()
-print(article_list1)
 
+# Get each word to create the wordcloud
 word_list = []
 for i in range(len(articles_final)):
 
@@ -72,22 +71,24 @@ for i in range(len(articles_final)):
     article_list = article_list.split()
     word_list += article_list
 
+# Show only 50 words
 word_counts = Counter(word_list)
 word_counts = word_counts.most_common(50)
 
+# Find the frequency of the words
 words_bag = []
 freqs = []
 for i in range(len(word_counts)):
     words_bag.append(word_counts[i][0])
     freqs.append(word_counts[i][1])
 
-print(words_bag, freqs)
+# Multiply each freq with 0.1 to create the weights
 freqs = [i * 0.1 for i in freqs]
 
 colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(len(words_bag))]
 weights = freqs
 
-
+# Create the scatterplot figure
 color_discrete_map = {'Negative': 'rgb(255,0,0)', 'Positive': 'rgb(0,255,0)', 'Neutral': 'rgb(0,0,255)'}
 fig1 = px.scatter(articles_final, x="dates", y="Polarity", color='Sentiment',color_discrete_map=color_discrete_map,hover_data=['article_title'])
 
@@ -104,7 +105,7 @@ fig2 = go.Figure(data=[data], layout=layout)
 
 idx = pd.date_range('01-06-2014', '01-17-2014')
 
-# read txt file:
+# Read txt file:
 text_markdown = "\t"
 with open('articles/default.txt') as this_file:
     for a in this_file.read():
@@ -113,18 +114,15 @@ with open('articles/default.txt') as this_file:
         else:
             text_markdown += a
 
-### Dash implementation ###
+""" Dash Implementation """
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
-app.css.append_css({'external_url': 'static/static.css'})
-app.server.static_folder = 'static'
 
+# Css for tab style
 tabs_styles = {
     'height': '44px',
-    # 'margin-left': '20px',
-    # 'margin-top': '20px',
     'margin-bottom': '20px',
     'backgroundColor': '#d3dedc'
 }
@@ -133,17 +131,16 @@ tab_style = {
     'padding': '6px',
     'fontWeight': 'bold',
     'backgroundColor': '#FFFFFF'
-    # 'color': 'white'
 }
 
 tab_selected_style = {
     'borderTop': '1px solid #d6d6d6',
-    # 'borderBottom': '1px solid #d6d6d6',
     'backgroundColor': '#218173',
     'color': 'white',
     'padding': '6px'
 }
 
+# Css for tab style
 background = {
     'position': 'absolute',
     'top': '0px',
@@ -153,12 +150,14 @@ background = {
     'background-color': '#218173'
 }
 
-app.title = 'Dissappearance at GASTech'
+# Form the layout of the dashboard
+
+# Create the organogram and the filter space below this
+app.title = 'Disappearance at GASTech'
 app.layout = html.Div([
 html.Div([
     html.Div(html.H1("Disappearance at GASTech"), style={'textAlign': 'center', 'color': '#FFFFFF'}),
-    #     html.Div([
-    # div for image set
+    # Div for image set and filters
     html.Div([
         dbc.Row([
             dbc.Col([
@@ -253,6 +252,7 @@ html.Div([
               'margin-bottom': '5px'
               }
     )],style={'margin-bottom': '20px'}),
+    # Div for tabs
     html.Div([
         dcc.Tabs(id="tabs-styled-with-inline", value='tab-1', children=[
             dcc.Tab(label='Communication', value='tab-1', style=tab_style, selected_style=tab_selected_style),
@@ -266,9 +266,11 @@ html.Div([
 @app.callback(Output('tabs-content-inline', 'children'),
               Input('tabs-styled-with-inline', 'value'))
 def render_content(tab):
+    """ This function create the content of each tab. It is split in Communication (tab-1) and Articles (tab-2)
+    """
     if tab == 'tab-1':
         return html.Div([
-            # div for adj_martix, subject table, timeline, checkbox, tod filter
+            # Div for adj_martix, subject table, timeline, checkbox, tod filter
             html.Div([
                 dbc.Row([
                     dbc.Col([
@@ -364,7 +366,7 @@ def render_content(tab):
             ]),
 
             html.Div([
-                # word cloud
+                # Div for wordcloud
                 dbc.Row([
                     dbc.Col([
                         html.Div([
@@ -424,6 +426,7 @@ def render_content(tab):
             ])
         ])
     elif tab == 'tab-2':
+        # Div for articles
         return html.Div([
             html.Br(),
             html.Div([
@@ -512,7 +515,7 @@ def render_content(tab):
 
 @app.callback(
     Output('image_wc', 'src'),
-    [Input('image_wc', 'id'),
+    [
      Input('graph', 'clickData'),
      Input("dropdown", "value"),
      Input("checklist", "value"),
@@ -523,10 +526,13 @@ def render_content(tab):
      Input("security", "value"),
      Input('radio-items', 'value'),
      Input('communication', 'clickData')])
-def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security, radio, comm):
+def plot_wordcloud(gra, tod, checklist, engg, exect, facil, IT, security, radio, comm):
+    """ This function used for creating and updating the wordcloud by applying the above input
+    as filters
+    """
+
     join_list = engg + exect + facil + IT + security
-    # ctx = dash.callback_context
-    # recent = ctx.triggered[0]['prop_id'].split('.')[0]
+
     if join_list != []:
         df = merge_original_from[merge_original_from['LastName_From'].isin(join_list)]
 
@@ -569,31 +575,19 @@ def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security, r
             df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To_Unlisted']]
         if tod != 'both':
             df = df[df['Time_of_day'] == tod]
-        print(df)
+
         allWords = ' '.join([word for word in df['Subject_new']])
-        print(allWords)
 
     else:
         df = merge_original_from.copy()
-        #         print("Before")
-        #         print(df)
+
         if comm != None:
-            #             print("After")
-            # startdate = pd.to_datetime(comm['points'][0]['x']).date()
-            df = df.loc[df['just_date'] == comm['points'][0]['x']]
-        #             print("Comm not empty")
-        #             print(comm)
-        #             print(df)
         if checklist == "Communication between different departments":
             df = df[df['CurrentEmploymentType_From'] != df['CurrentEmploymentType_To_Unlisted']]
         if tod != 'both':
             df = df[df['Time_of_day'] == tod]
         allWords = ' '.join([word for word in df['Subject_new']])
 
-        #         else:
-        #             allWords = ' '.join([word for word in final['Subject']])
-    #         print("XXX ALL  WORDS")
-    #     print(allWords)
     if radio == 'not_common':
         wc = WordCloud(width=500, height=300, max_words=60, random_state=21, max_font_size=115, background_color='white',
                        colormap='winter').generate(allWords)
@@ -620,9 +614,12 @@ def plot_wordcloud(ids, gra, tod, checklist, engg, exect, facil, IT, security, r
      Input("exect","value"),
      Input("facil","value"),
      Input("IT","value"),
-     Input("security","value"),
-     Input("graph", "clickData")])
-def update_adj_marix(tod, checklist,engg, exect, facil, it, security,graph):
+     Input("security","value")])
+def update_adj_marix(tod, checklist,engg, exect, facil, it, security):
+    """ This function used for creating and updating the adjacency matrix by applying the above input
+    as filters
+    """
+
     join_list = engg + exect + facil + it + security
     if join_list != []:
         df = final[final['LastName_From'].isin(join_list)]
@@ -678,6 +675,10 @@ def update_adj_marix(tod, checklist,engg, exect, facil, it, security,graph):
      Input('communication', "clickData")
      ])
 def update_timeline(people,engg, exect, facil, it, security, tod, checklist, comm):
+    """ This function used for creating and updating the communication timeline by applying the above input
+    as filters
+    """
+
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
     join_list = engg + exect + facil + it + security
@@ -883,6 +884,43 @@ def update_timeline(people,engg, exect, facil, it, security, tod, checklist, com
                 fig.update_xaxes(showline=True, linewidth=2, linecolor='black')
                 fig.update_yaxes(showline=True, linewidth=2, linecolor='black')
                 return fig
+            elif people != None:
+                person_from = people['points'][0]['y']
+                person_to = people['points'][0]['x']
+                if (df['CurrentEmploymentType_From'] == person_from).eq(False).all():
+                    dff = df[df['LastName_From'] == person_from]
+                else:
+                    dff = df[df['CurrentEmploymentType_From'] == person_from]
+
+                final_df = dff[dff['CurrentEmploymentType_To'] == person_to]
+
+                final_df['dates_count'] = final_df.groupby('just_date')['just_date'].transform('count')
+                only_dates = final_df.drop_duplicates(subset='just_date', keep="first")
+                only_dates = only_dates[['just_date', 'dates_count']]
+                only_dates.set_index('just_date', inplace=True)
+                only_dates.index = pd.DatetimeIndex(only_dates.index)
+
+                only_dates = only_dates.reindex(idx, fill_value=0)
+
+                only_dates.reset_index(inplace=True)
+
+                colors = []
+
+                for i in only_dates['index']:
+                    colors.append('#218173')
+
+                fig = px.bar(only_dates, x="index", y="dates_count", barmode='relative', color=colors,
+                             color_discrete_map="identity")
+
+                fig.update_layout(
+                    title=f'Communication: From: {person_from} To {person_to}',
+                    xaxis_title="Dates",
+                    yaxis_title="Number of emails",  # paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                fig.update_xaxes(showline=True, linewidth=2, linecolor='black')
+                fig.update_yaxes(showline=True, linewidth=2, linecolor='black')
+                return fig
             else:
 
                 only_dates = df.drop_duplicates(subset='dates_count', keep="first")
@@ -1016,6 +1054,10 @@ def update_timeline(people,engg, exect, facil, it, security, tod, checklist, com
      Input("security", "value")
      ])
 def update_subject(people, tod, checklist, comm, engg, exect, facil, it, security):
+    """ This function used for creating and updating the subject table by applying the above input
+    as filters
+    """
+
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
     #join dropdown box values
@@ -1105,6 +1147,9 @@ def update_subject(people, tod, checklist, comm, engg, exect, facil, it, securit
      Input("security", "value")]
 )
 def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
+    """ This function used for creating and updating the sentiment graph, wordcloud and articles
+     container by applying the above input as filters
+    """
 
     #list of the names of employees filtered by dropdown
     joined_list = engg + exect + facil + IT + security
@@ -1116,7 +1161,6 @@ def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
         l = re.split('[-. ]', element)
         lst += l
     lowercase_list = lst
-    print(lowercase_list)
 
     ctx = dash.callback_context
     clicked_element = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -1130,7 +1174,6 @@ def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
             articles_filtered = articles_final
 
         if lowercase_list != []:
-            print('inside first condition')
             articles_involved = []
             for i in range(len(articles_final)):
                 article_words = literal_eval(articles_final['content'].iloc[i])
@@ -1138,7 +1181,6 @@ def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
                 if check:
                     articles_involved.append(articles_final['article_number'].iloc[i])
             articles_filtered = articles_filtered[articles_filtered['article_number'].isin(articles_involved)]
-            print(articles_filtered)
 
         color_discrete_map = {'Negative': 'rgb(255,0,0)', 'Positive': 'rgb(0,255,0)', 'Neutral': 'rgb(0,0,255)'}
         fig1 = px.scatter(articles_filtered, x="dates", y="Polarity", color='Sentiment',
@@ -1290,10 +1332,6 @@ def update_articles(checklist_values,clickData,engg,exect,facil,IT,security):
 
 if __name__ == '__main__':
     app.run_server()
-
-
-# In[ ]:
-
 
 
 
