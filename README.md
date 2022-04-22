@@ -1,6 +1,6 @@
 ## VisualAnalytics - 2AMV10
 
-###Disappearance at Gastech Challenge
+**Disappearance at Gastech Challenge**
 
 ## How to run this app
 
